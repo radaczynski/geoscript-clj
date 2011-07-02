@@ -37,12 +37,14 @@
 
 
 (defn create-shapefile [file]
+  "Function to create and return a new datastore shapefile"
   (let [factory (ShapefileDataStoreFactory.)]
     (.createNewDataStore factory
                          {"url" (-> file  (.toURI)(.toURL))
                           "create spatial index" true })))
 
 (defn create-schema [schema]
+  "Function to create a GeoTools SimpleFeatureType"
   (let [name (:name schema)
         string (StringBuilder.)]
     (doseq [propertry (:properties schema)]
@@ -50,12 +52,14 @@
     (DataUtilities/createType name (.toString string))))
 
 (defn get-schema [gt-feature-source]
-  "Returns the column names of a  GeoTools FeatureSource"
-  (let [types (.getTypes (.getSchema gt-feature-source))]
-    (map #(keyword ( .. % getName getLocalPart)) types )))
+  "Takes a GeoTools Feature Source and returns "
+  (let [schema (.getSchema gt-feature-source)]
+    {:name (.getLocalPart (.getName schema))
+     :fields  (map #(vector ( .. % getName getLocalPart)
+                           (.getBinding %)) (.getTypes schema))}))
 
 (defn read-properties
-  "given a geotools feature, return a hash of properties that aren't geometries"
+  "Given a geotools feature, return a hash of properties that aren't geometries"
   [gt-feature]
   (let [geom-prop? #(-> % .getValue class (isa? Geometry))
         nongeom-properties (remove geom-prop?
@@ -68,13 +72,13 @@
             nongeom-properties)))
 
 (defn make-geo-feature [gt-feature]
-  "given a geotools feature, create a hash of useful info"
+  "Given a geotools feature, create a hash of useful info"
   {:id (.getID gt-feature)
    :properties (read-properties gt-feature)
    :geometry (.getDefaultGeometry gt-feature)})
 
 (defn make-lazy-feature-iterator
-  "create an object implementing iterator and featureiterator"
+  "Create an object implementing iterator and featureiterator"
   [feature-builder feature-sequence]
   (let [features-state (atom (seq feature-sequence))]
     (reify
@@ -87,7 +91,7 @@
                     (feature-builder (first current-state)))))))
 
 (defn make-feature-builder
-  "create a function that can take a clojure feature
+  "Create a function that can take a clojure feature
    and generates a geotools feature"
   [feature-type]
   (let [feature-builder (SimpleFeatureBuilder. feature-type)]
@@ -100,7 +104,7 @@
       (.buildFeature feature-builder (:id geo-feature)))))
 
 (defn make-lazy-feature-collection
-  "creates a lazy implementation of a feature collection"
+  "Creates a lazy implementation of a feature collection"
   [feature-type features-sequence]
   (let [feature-builder (make-feature-builder feature-type)]
     (reify
@@ -113,7 +117,7 @@
       (^void close [this ^java.util.Iterator iterator] nil))))
 
 (defn make-eager-feature-collection
-  "uses the geotools memoryfeaturecollection to store all features in memory"
+  "Uses the geotools memoryfeaturecollection to store all features in memory"
   [feature-type geo-sequence]
   (let [feature-builder (make-feature-builder feature-type)
         memory-feature-collection (MemoryFeatureCollection. feature-type)]
@@ -122,7 +126,7 @@
     memory-feature-collection))
 
 (defn read-features
-  "read features from data store and return a collection"
+  "Read features from data store and return a collection"
   [datastore & options]
   (let [{:keys [layer query]} (apply hash-map options)
         feature-source (if layer
@@ -133,7 +137,7 @@
       (.getFeatures feature-source))))
 
 (defn write-features
-  "writes a collection to an existing layer in a datastore"
+  "Writes a collection to an existing layer in a datastore"
   [datastore layer gt-collection]
   (let [transaction (DefaultTransaction. "add")
         feature-source (.getFeatureSource datastore layer)]
@@ -149,26 +153,26 @@
 
 
 (defmacro with-feature-source 
-  "Macro that allows a user to iterate through Feature Collection. The
-   feature collection iterator is closed after the body argument is
-   evaluated.  This does not convert the feature to a clojure map. see
-   the with-features macro if you want to convert each feature into a
-   clojure map. 
+  "Macro that allows a user to iterate through FeatureSource. The
+   feature collection iterator is closed after the body is evaluated.
+   This does not convert the feature to a clojure map. see the
+   with-features macro if you want to convert each feature into a
+   clojure map.
 
    Arguments
     source-binding
-    body     
+    body 
    "
   [source-binding & body]
   `(let [gt-coll# ~(source-binding 1)
          source-iterator# (.iterator gt-coll#)
          ~(source-binding 0) (iterator-seq source-iterator#)]
      (try
-       (do ~@body)
+       (doall ~@body)
        (finally (.close gt-coll# source-iterator#)))))
        
 (defmacro with-features
-  "obtain a feature iterator, and close it out of scope"
+  "Obtain a feature iterator, and close it out of scope"
   [features-binding & body]
   (if (or (not (vector? features-binding))
           (not (= 2 (count features-binding)))
@@ -198,8 +202,6 @@
            nil?
            (map (fn [~(feature-binding 0)] ~@body)
                 features#)))))))
-
-
 
 
 (defn make-filter [cql]
