@@ -2,6 +2,7 @@
   (:require [clojure.contrib.string :as string])
   (:import
    [java.io File]
+   [org.geotools.feature.simple SimpleFeatureTypeBuilder]
    [com.vividsolutions.jts.geom Geometry]
    [org.geotools.data.shapefile ShapefileDataStoreFactory]
    [org.geotools.swing ProgressWindow]
@@ -10,6 +11,8 @@
    [org.geotools.feature.simple SimpleFeatureBuilder]
    [org.geotools.data.memory MemoryFeatureCollection]
    [org.geotools.data DataStoreFinder]))
+
+
 
 (defn data-store
   "Function to return a geotools datastore given an input string uri
@@ -43,16 +46,21 @@
                          {"url" (-> file  (.toURI)(.toURL))
                           "create spatial index" true })))
 
-(defn create-schema [schema]
-  "Function to create a GeoTools SimpleFeatureType"
-  (let [name (:name schema)
-        string (StringBuilder.)]
-    (doseq [propertry (:properties schema)]
-      (.append string (str (string/join ":" propertry) ",")))
-    (DataUtilities/createType name (.toString string))))
+
+(defn make-schema [{:keys [name fields]}]
+  "Returns a GeoTools SimpleFeatureType from a map with two keys
+    :name \"The name of the feature type\"
+    :fields \"a list of vectors, the field name and field type
+  This function can take the results of the get-schema function
+  "
+  (let [builder (doto (SimpleFeatureTypeBuilder.)
+                  (.setName name))]
+    (doseq [field fields]
+      (.add builder (first field) (second field)))
+    (.buildFeatureType builder)))
 
 (defn get-schema [gt-feature-source]
-  "Takes a GeoTools Feature Source and returns "
+  "Takes a GeoTools Feature Source and returns map"
   (let [schema (.getSchema gt-feature-source)]
     {:name (.getLocalPart (.getName schema))
      :fields  (map #(vector ( .. % getName getLocalPart)
@@ -203,7 +211,6 @@
            (map (fn [~(feature-binding 0)] ~@body)
                 features#)))))))
 
-
 (defn make-filter [cql]
-  "convenience functions for creating filters"
+  "Convenience functions for creating filters"
   (org.geotools.filter.text.cql2.CQL/toFilter cql))
