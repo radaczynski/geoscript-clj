@@ -1,8 +1,7 @@
 (ns geoscript.geometry
   (:require
-   [clojure.contrib.json :as json])
+   [clojure.data.json :as json])
   (:use
-   [clojure.contrib.seq-utils :only (seq-on)]
    [geoscript seq])
   (:import [org.geotools.geometry.jts JTS JTSFactoryFinder]
            [org.geotools.referencing CRS]
@@ -27,7 +26,7 @@
 
 (defn write-geometry [geometry out]
   (.print out (json/json-str {:type (.getGeometryType geometry)
-                               :coordinates [(seq-on geometry)]})))
+                               :coordinates [(seq geometry)]})))
 
 (extend Point json/Write-JSON
         {:write-json write-geometry })

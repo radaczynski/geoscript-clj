@@ -4,7 +4,7 @@
   :url "http://geoscript.org/"
   :main geoscript.core
   :dependencies [[org.clojure/clojure "1.2.1"]
-                 [org.clojure/clojure-contrib "1.2.0"]
+     	         [org.clojure/data.json "0.1.1"]
                  [org.geotools/gt-main "8-SNAPSHOT"]
                  [org.geotools/gt-swing "8-SNAPSHOT"]                 
                  [org.geotools/gt-epsg-hsql "8-SNAPSHOT"]

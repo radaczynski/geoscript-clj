@@ -1,5 +1,4 @@
 (ns geoscript.seq
-  (:use [clojure.contrib.seq-utils :only (seq-on)])
   (:import  [com.vividsolutions.jts.geom
              MultiPoint
              MultiLineString
@@ -10,6 +9,16 @@
              Point
              Coordinate]))
 
+;; seq-on written by Konrad Hinsen
+(defmulti seq-on
+  "Returns a seq on the object s. Works like the built-in seq but as
+   a multimethod that can have implementations for new classes and types."
+  {:arglists '([s])}
+  type)
+
+(defmethod seq-on :default
+  [s]
+  (seq s))
 
 (defmethod seq-on Coordinate [geometry]
   (list(.x geometry) (.y geometry)))
