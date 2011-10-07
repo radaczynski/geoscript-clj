@@ -2,9 +2,10 @@
   (:import
    [java.io StringWriter]
    [org.geotools.geojson.feature FeatureJSON]
-   [org.geotools.geojson GeoJSON]))
+   [org.geotools.geojson.geom GeometryJSON]))
 
 (def *fjson* (FeatureJSON.))
+(defonce *geojson* (GeometryJson.))
 
 (defn feature->geojson [feature]
   "Writes a GeoTools Simple Feature to a "
@@ -29,5 +30,9 @@
 (defn geometry->geojson [geometry]
   "Writes a geometry to a GeoJSON String"
   (let [writer (StringWriter.)]
-    (GeoJSON/write geometry writer)
+    (.write *geojson* geometry writer)
     writer))
+
+(defn geojson->geometry [geojson]
+  "Reads a geojson and parses into geometry"
+  (.read *geojson* geojson))
